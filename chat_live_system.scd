@@ -41,11 +41,11 @@ s.waitForBoot({
     }).add;
 
     // --- リードシンセ ---
-    SynthDef(\chatLead, { arg freq=440, amp=0.15, gate=1, cutoff=3000, pw=0.5;
+    SynthDef(\chatLead, { arg freq=440, amp=0.15, cutoff=3000, pw=0.5, dur=0.3;
         var sig, env;
         sig = Pulse.ar(freq, pw) + Saw.ar(freq * 0.999);
         sig = RLPF.ar(sig, cutoff, 0.3);
-        env = EnvGen.kr(Env.asr(0.01, 1, 0.3), gate, doneAction: 2);
+        env = EnvGen.kr(Env.perc(0.01, dur), doneAction: 2);
         sig = sig * env * amp;
         Out.ar(0, sig ! 2);
     }).add;
@@ -109,7 +109,7 @@ s.waitForBoot({
         masterVol: 0.7,
 
         // 各パートのON/OFF
-        bassOn: true,
+        bassOn: false,
         padOn: false,
         leadOn: false,
         drumOn: false,
@@ -241,15 +241,17 @@ s.waitForBoot({
                 });
 
                 if(~state[\density].coin, {
+                    var noteDur = stepDur * [0.25, 0.5, 0.5, 1].choose;
                     Synth(\chatLead, [
                         \freq, note.midicps,
                         \amp, 0.15 * ~state[\masterVol],
                         \cutoff, rrand(1000, 4000),
-                        \gate, 1
+                        \dur, noteDur
                     ]);
+                    noteDur.wait;
+                }, {
+                    (stepDur * [0.25, 0.5, 0.5, 1].choose).wait;
                 });
-
-                (stepDur * [0.25, 0.5, 0.5, 1].choose).wait;
             });
         }).play;
         ~state[\leadOn] = true;
@@ -268,8 +270,18 @@ s.waitForBoot({
     // --- エフェクト ---
     ~startFX = {
         ~state[\reverbSynth] = Synth.tail(s, \chatReverb, [\mix, ~state[\reverbMix]]);
-        ~state[\delaySynth] = Synth.tail(s, \chatDelay, [\mix, ~state[\delayMix]]);
+        ~state[\delaySynth] = Synth.tail(s, \chatDelay, [
+            \mix, ~state[\delayMix],
+            \delaytime, 60 / ~state[\bpm] / 2
+        ]);
         ">> FX chain ready".postln;
+    };
+
+    // --- ディレイをBPMに同期 ---
+    ~syncDelayToBpm = {
+        if(~state[\delaySynth].notNil, {
+            ~state[\delaySynth].set(\delaytime, 60 / ~state[\bpm] / 2);
+        });
     };
 
     // =============================================
@@ -365,6 +377,7 @@ s.waitForBoot({
                 var newBpm = num[0][1].asInteger;
                 if((newBpm >= 40) and: { newBpm <= 300 }, {
                     ~state[\bpm] = newBpm;
+                    ~syncDelayToBpm.value;
                     response = "Tempo: " ++ newBpm.asString ++ " BPM";
                 }, {
                     response = "BPM out of range (40-300)";
@@ -375,10 +388,12 @@ s.waitForBoot({
         }
         { cmd.contains("faster") or: { cmd.contains("速く") or: { cmd.contains("fast") } } } {
             ~state[\bpm] = (~state[\bpm] + 15).min(300);
+            ~syncDelayToBpm.value;
             response = "Faster! BPM: " ++ ~state[\bpm].asString;
         }
         { cmd.contains("slower") or: { cmd.contains("遅く") or: { cmd.contains("slow") } } } {
             ~state[\bpm] = (~state[\bpm] - 15).max(40);
+            ~syncDelayToBpm.value;
             response = "Slower... BPM: " ++ ~state[\bpm].asString;
         }
 
@@ -560,7 +575,7 @@ s.waitForBoot({
         ~addLog = { arg cmd, response;
             var timestamp = Date.getDate.format("%H:%M:%S");
             var displayLines;
-            ~logMessages.add("> " ++ cmd);
+            ~logMessages.add("[" ++ timestamp ++ "] > " ++ cmd);
             ~logMessages.add("  " ++ response);
             ~logMessages.add("");
 
