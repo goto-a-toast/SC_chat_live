@@ -137,8 +137,8 @@ s.waitForBoot({
         dark:     Scale.phrygian,
         chaos:    Scale.chromatic,
         japanese: Scale.ritusen,
-        blues:    Scale.blues,
-        arabic:   Scale.hijaz,
+        blues:    Scale([0, 3, 5, 6, 7, 10], 12, name: "Blues"),
+        arabic:   Scale([0, 1, 4, 5, 7, 8, 11], 12, name: "Hijaz"),
     );
 
     // --- ベース開始/停止 ---
