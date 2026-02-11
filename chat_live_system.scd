@@ -128,6 +128,31 @@ s.waitForBoot({
         delaySynth: nil,
         reverbMix: 0.3,
         delayMix: 0.0,
+
+        // --- 各パートの音色パラメータ ---
+        // Bass
+        bassCutoff: 800,
+        bassRes: 0.3,
+        bassLfoRate: 0.5,
+        bassLfoDepth: 200,
+        bassAmp: 0.3,
+
+        // Pad
+        padCutoff: 2000,
+        padAttack: 2,
+        padRelease: 3,
+        padAmp: 0.2,
+
+        // Lead
+        leadCutoff: 3000,
+        leadPw: 0.5,
+        leadAmp: 0.15,
+
+        // Drums
+        kickAmp: 0.5,
+        snareAmp: 0.3,
+        hatAmp: 0.1,
+        hatDecay: 0.08,
     );
 
     // --- スケール定義 ---
@@ -146,8 +171,11 @@ s.waitForBoot({
         if(~state[\bassSynth].notNil, { ~state[\bassSynth].free });
         ~state[\bassSynth] = Synth(\chatBass, [
             \freq, ~state[\rootNote].midicps,
-            \cutoff, 800,
-            \amp, 0.3 * ~state[\masterVol]
+            \cutoff, ~state[\bassCutoff],
+            \res, ~state[\bassRes],
+            \lfoRate, ~state[\bassLfoRate],
+            \lfoDepth, ~state[\bassLfoDepth],
+            \amp, ~state[\bassAmp] * ~state[\masterVol]
         ]);
         ~state[\bassOn] = true;
         ">> Bass ON".postln;
@@ -167,8 +195,10 @@ s.waitForBoot({
         if(~state[\padSynth].notNil, { ~state[\padSynth].free });
         ~state[\padSynth] = Synth(\chatPad, [
             \freq, (~state[\rootNote] + 12).midicps,
-            \cutoff, 2000,
-            \amp, 0.2 * ~state[\masterVol]
+            \cutoff, ~state[\padCutoff],
+            \attack, ~state[\padAttack],
+            \release, ~state[\padRelease],
+            \amp, ~state[\padAmp] * ~state[\masterVol]
         ]);
         ~state[\padOn] = true;
         ">> Pad ON".postln;
@@ -193,19 +223,19 @@ s.waitForBoot({
 
                 // キック: 4つ打ち + ランダム
                 if((i % 4 == 0) or: { ~state[\chaos].coin }, {
-                    Synth(\chatKick, [\amp, 0.5 * ~state[\masterVol]]);
+                    Synth(\chatKick, [\amp, ~state[\kickAmp] * ~state[\masterVol]]);
                 });
 
                 // スネア: 2,4拍
                 if(i % 4 == 2, {
-                    Synth(\chatSnare, [\amp, 0.3 * ~state[\masterVol]]);
+                    Synth(\chatSnare, [\amp, ~state[\snareAmp] * ~state[\masterVol]]);
                 });
 
                 // ハイハット: density で密度変化
                 if(~state[\density].coin, {
                     Synth(\chatHat, [
-                        \amp, rrand(0.05, 0.15) * ~state[\masterVol],
-                        \decay, rrand(0.03, 0.12)
+                        \amp, ~state[\hatAmp] * rrand(0.5, 1.5) * ~state[\masterVol],
+                        \decay, ~state[\hatDecay]
                     ]);
                 });
 
@@ -244,8 +274,9 @@ s.waitForBoot({
                     var noteDur = stepDur * [0.25, 0.5, 0.5, 1].choose;
                     Synth(\chatLead, [
                         \freq, note.midicps,
-                        \amp, 0.15 * ~state[\masterVol],
-                        \cutoff, rrand(1000, 4000),
+                        \amp, ~state[\leadAmp] * ~state[\masterVol],
+                        \cutoff, ~state[\leadCutoff] * rrand(0.5, 1.5),
+                        \pw, ~state[\leadPw],
                         \dur, noteDur
                     ]);
                     noteDur.wait;
@@ -331,6 +362,9 @@ s.waitForBoot({
         { cmd.contains("dark") or: { cmd.contains("ダーク") } } {
             ~state[\mood] = \dark;
             ~state[\scale] = ~moodScales[\dark];
+            ~state[\bassCutoff] = 400;
+            ~state[\bassRes] = 0.5;
+            ~state[\padCutoff] = 800;
             if(~state[\bassSynth].notNil, {
                 ~state[\bassSynth].set(\cutoff, 400, \res, 0.5);
             });
@@ -344,6 +378,9 @@ s.waitForBoot({
         { cmd.contains("bright") or: { cmd.contains("明るく") or: { cmd.contains("happy") } } } {
             ~state[\mood] = \bright;
             ~state[\scale] = ~moodScales[\bright];
+            ~state[\bassCutoff] = 2000;
+            ~state[\bassRes] = 0.1;
+            ~state[\padCutoff] = 4000;
             if(~state[\bassSynth].notNil, {
                 ~state[\bassSynth].set(\cutoff, 2000, \res, 0.1);
             });
@@ -447,10 +484,10 @@ s.waitForBoot({
                 20.do({ arg i;
                     ~state[\masterVol] = (1.0 - (i / 20)) * 0.7;
                     if(~state[\bassSynth].notNil, {
-                        ~state[\bassSynth].set(\amp, 0.3 * ~state[\masterVol]);
+                        ~state[\bassSynth].set(\amp, ~state[\bassAmp] * ~state[\masterVol]);
                     });
                     if(~state[\padSynth].notNil, {
-                        ~state[\padSynth].set(\amp, 0.2 * ~state[\masterVol]);
+                        ~state[\padSynth].set(\amp, ~state[\padAmp] * ~state[\masterVol]);
                     });
                     0.15.wait;
                 });
@@ -477,6 +514,23 @@ s.waitForBoot({
             ~state[\masterVol] = 0.7;
             ~state[\reverbMix] = 0.3;
             ~state[\delayMix] = 0.0;
+            // 音色パラメータもリセット
+            ~state[\bassCutoff] = 800;
+            ~state[\bassRes] = 0.3;
+            ~state[\bassLfoRate] = 0.5;
+            ~state[\bassLfoDepth] = 200;
+            ~state[\bassAmp] = 0.3;
+            ~state[\padCutoff] = 2000;
+            ~state[\padAttack] = 2;
+            ~state[\padRelease] = 3;
+            ~state[\padAmp] = 0.2;
+            ~state[\leadCutoff] = 3000;
+            ~state[\leadPw] = 0.5;
+            ~state[\leadAmp] = 0.15;
+            ~state[\kickAmp] = 0.5;
+            ~state[\snareAmp] = 0.3;
+            ~state[\hatAmp] = 0.1;
+            ~state[\hatDecay] = 0.08;
             if(~state[\reverbSynth].notNil, { ~state[\reverbSynth].set(\mix, 0.3, \room, 0.7) });
             if(~state[\delaySynth].notNil, { ~state[\delaySynth].set(\mix, 0.0) });
             response = "Reset! All cleared.";
@@ -500,9 +554,44 @@ s.waitForBoot({
     // =============================================
     // 4. GUI
     // =============================================
+
+    // --- スライダー付きラベル生成ヘルパー ---
+    ~makeSlider = { arg parent, bounds, label, min, max, initVal, color, action;
+        var labelW = 55, valW = 40, sliderX, sliderW;
+        var yPos = bounds.top;
+        var xPos = bounds.left;
+        var width = bounds.width;
+        var valLabel;
+
+        sliderX = xPos + labelW;
+        sliderW = width - labelW - valW - 4;
+
+        StaticText(parent, Rect(xPos, yPos, labelW, 16))
+            .string_(label)
+            .font_(Font("Helvetica", 9))
+            .stringColor_(color);
+
+        valLabel = StaticText(parent, Rect(xPos + width - valW, yPos, valW, 16))
+            .string_(initVal.round(0.01).asString)
+            .font_(Font("Courier", 9))
+            .stringColor_(color)
+            .align_(\right);
+
+        Slider(parent, Rect(sliderX, yPos, sliderW, 14))
+            .background_(Color.gray(0.18))
+            .knobColor_(color.alpha_(0.8))
+            .value_(initVal.linlin(min, max, 0, 1))
+            .action_({ arg sl;
+                var val = sl.value.linlin(0, 1, min, max);
+                { valLabel.string_(val.round(0.01).asString) }.defer;
+                action.value(val);
+            });
+    };
+
     {
         var win, inputField, logView, logText;
         var statusColor;
+        var toneY, colW, col1, col2, col3, col4;
 
         // FXチェーン開始
         ~startFX.value;
@@ -510,37 +599,37 @@ s.waitForBoot({
         // ベースを開始（初期状態）
         ~startBass.value;
 
-        win = Window("Chat Live Controller", Rect(200, 200, 500, 600))
+        win = Window("Chat Live Controller", Rect(100, 100, 820, 720))
             .background_(Color.gray(0.12));
 
         // --- タイトル ---
-        StaticText(win, Rect(20, 10, 460, 35))
-            .string_("Chat Live Performance")
+        StaticText(win, Rect(20, 8, 780, 30))
+            .string_("Chat Live Performance - Ambient Noise")
             .align_(\center)
-            .font_(Font("Helvetica", 20, true))
+            .font_(Font("Helvetica", 18, true))
             .stringColor_(Color.new255(100, 220, 255));
 
-        StaticText(win, Rect(20, 42, 460, 18))
-            .string_("Type commands to control the music")
+        StaticText(win, Rect(20, 35, 780, 16))
+            .string_("Type commands or use tone sliders for real-time control")
             .align_(\center)
-            .font_(Font("Helvetica", 11))
+            .font_(Font("Helvetica", 10))
             .stringColor_(Color.gray(0.5));
 
         // --- ステータス表示 ---
-        ~statusText = StaticText(win, Rect(20, 70, 460, 22))
+        ~statusText = StaticText(win, Rect(20, 56, 780, 20))
             .string_("Ready. Bass is playing.")
             .align_(\center)
             .font_(Font("Helvetica", 11, true))
             .stringColor_(Color.green(0.8));
 
         // --- パート状態インジケータ ---
-        StaticText(win, Rect(20, 100, 460, 18))
+        StaticText(win, Rect(20, 80, 780, 16))
             .string_("Active Parts:")
             .font_(Font("Helvetica", 10, true))
             .stringColor_(Color.gray(0.6));
 
         ~partLabels = [\BASS, \PAD, \LEAD, \DRUMS].collect({ arg name, i;
-            var label = StaticText(win, Rect(20 + (i * 115), 120, 105, 28))
+            var label = StaticText(win, Rect(20 + (i * 195), 98, 185, 24))
                 .string_(name.asString)
                 .align_(\center)
                 .font_(Font("Helvetica", 12, true))
@@ -550,22 +639,207 @@ s.waitForBoot({
         });
 
         // --- パラメータ表示 ---
-        ~paramText = StaticText(win, Rect(20, 160, 460, 60))
-            .string_("BPM: 110 | Scale: minor | Chaos: 0% | Density: 50%\nReverb: 30% | Delay: 0% | Mood: neutral")
-            .font_(Font("Courier", 11))
+        ~paramText = StaticText(win, Rect(20, 128, 780, 36))
+            .string_("BPM: 110 | Scale: minor | Chaos: 0% | Density: 50% | Reverb: 30% | Delay: 0% | Mood: neutral")
+            .font_(Font("Courier", 10))
             .stringColor_(Color.new255(180, 180, 220));
 
+        // =============================================
+        // --- TONE CONTROLS ---
+        // =============================================
+        toneY = 172;
+        colW = 190;
+        col1 = 15;
+        col2 = col1 + colW + 10;
+        col3 = col2 + colW + 10;
+        col4 = col3 + colW + 10;
+
+        StaticText(win, Rect(20, toneY - 4, 780, 18))
+            .string_("TONE CONTROLS")
+            .font_(Font("Helvetica", 11, true))
+            .stringColor_(Color.new255(255, 200, 100));
+
+        // ---- BASS ----
+        StaticText(win, Rect(col1, toneY + 18, colW, 14))
+            .string_("BASS")
+            .font_(Font("Helvetica", 10, true))
+            .stringColor_(Color.cyan);
+
+        ~makeSlider.value(win, Rect(col1, toneY + 34, colW, 16),
+            "Cutoff", 80, 8000, ~state[\bassCutoff], Color.cyan,
+            { arg val;
+                ~state[\bassCutoff] = val;
+                if(~state[\bassSynth].notNil, { ~state[\bassSynth].set(\cutoff, val) });
+            });
+
+        ~makeSlider.value(win, Rect(col1, toneY + 54, colW, 16),
+            "Reso", 0.0, 1.0, ~state[\bassRes], Color.cyan,
+            { arg val;
+                ~state[\bassRes] = val;
+                if(~state[\bassSynth].notNil, { ~state[\bassSynth].set(\res, val) });
+            });
+
+        ~makeSlider.value(win, Rect(col1, toneY + 74, colW, 16),
+            "LFO Spd", 0.01, 10.0, ~state[\bassLfoRate], Color.cyan,
+            { arg val;
+                ~state[\bassLfoRate] = val;
+                if(~state[\bassSynth].notNil, { ~state[\bassSynth].set(\lfoRate, val) });
+            });
+
+        ~makeSlider.value(win, Rect(col1, toneY + 94, colW, 16),
+            "LFO Dpt", 0, 800, ~state[\bassLfoDepth], Color.cyan,
+            { arg val;
+                ~state[\bassLfoDepth] = val;
+                if(~state[\bassSynth].notNil, { ~state[\bassSynth].set(\lfoDepth, val) });
+            });
+
+        ~makeSlider.value(win, Rect(col1, toneY + 114, colW, 16),
+            "Vol", 0.0, 0.8, ~state[\bassAmp], Color.cyan,
+            { arg val;
+                ~state[\bassAmp] = val;
+                if(~state[\bassSynth].notNil, {
+                    ~state[\bassSynth].set(\amp, val * ~state[\masterVol]);
+                });
+            });
+
+        // ---- PAD ----
+        StaticText(win, Rect(col2, toneY + 18, colW, 14))
+            .string_("PAD")
+            .font_(Font("Helvetica", 10, true))
+            .stringColor_(Color.yellow(0.8));
+
+        ~makeSlider.value(win, Rect(col2, toneY + 34, colW, 16),
+            "Cutoff", 200, 8000, ~state[\padCutoff], Color.yellow(0.8),
+            { arg val;
+                ~state[\padCutoff] = val;
+                if(~state[\padSynth].notNil, { ~state[\padSynth].set(\cutoff, val) });
+            });
+
+        ~makeSlider.value(win, Rect(col2, toneY + 54, colW, 16),
+            "Attack", 0.1, 10.0, ~state[\padAttack], Color.yellow(0.8),
+            { arg val;
+                ~state[\padAttack] = val;
+                if(~state[\padSynth].notNil, { ~state[\padSynth].set(\attack, val) });
+            });
+
+        ~makeSlider.value(win, Rect(col2, toneY + 74, colW, 16),
+            "Release", 0.5, 10.0, ~state[\padRelease], Color.yellow(0.8),
+            { arg val;
+                ~state[\padRelease] = val;
+                if(~state[\padSynth].notNil, { ~state[\padSynth].set(\release, val) });
+            });
+
+        ~makeSlider.value(win, Rect(col2, toneY + 94, colW, 16),
+            "Vol", 0.0, 0.6, ~state[\padAmp], Color.yellow(0.8),
+            { arg val;
+                ~state[\padAmp] = val;
+                if(~state[\padSynth].notNil, {
+                    ~state[\padSynth].set(\amp, val * ~state[\masterVol]);
+                });
+            });
+
+        // ---- LEAD ----
+        StaticText(win, Rect(col3, toneY + 18, colW, 14))
+            .string_("LEAD")
+            .font_(Font("Helvetica", 10, true))
+            .stringColor_(Color.magenta);
+
+        ~makeSlider.value(win, Rect(col3, toneY + 34, colW, 16),
+            "Cutoff", 200, 8000, ~state[\leadCutoff], Color.magenta,
+            { arg val;
+                ~state[\leadCutoff] = val;
+                // Lead uses Routine; cutoff applied on next note
+            });
+
+        ~makeSlider.value(win, Rect(col3, toneY + 54, colW, 16),
+            "PulseW", 0.1, 0.9, ~state[\leadPw], Color.magenta,
+            { arg val;
+                ~state[\leadPw] = val;
+                // Lead uses Routine; pw applied on next note
+            });
+
+        ~makeSlider.value(win, Rect(col3, toneY + 74, colW, 16),
+            "Vol", 0.0, 0.5, ~state[\leadAmp], Color.magenta,
+            { arg val;
+                ~state[\leadAmp] = val;
+                // Lead uses Routine; amp applied on next note
+            });
+
+        // ---- DRUMS ----
+        StaticText(win, Rect(col4, toneY + 18, colW, 14))
+            .string_("DRUMS")
+            .font_(Font("Helvetica", 10, true))
+            .stringColor_(Color.green(0.8));
+
+        ~makeSlider.value(win, Rect(col4, toneY + 34, colW, 16),
+            "Kick", 0.0, 1.0, ~state[\kickAmp], Color.green(0.8),
+            { arg val; ~state[\kickAmp] = val; });
+
+        ~makeSlider.value(win, Rect(col4, toneY + 54, colW, 16),
+            "Snare", 0.0, 1.0, ~state[\snareAmp], Color.green(0.8),
+            { arg val; ~state[\snareAmp] = val; });
+
+        ~makeSlider.value(win, Rect(col4, toneY + 74, colW, 16),
+            "Hat", 0.0, 0.5, ~state[\hatAmp], Color.green(0.8),
+            { arg val; ~state[\hatAmp] = val; });
+
+        ~makeSlider.value(win, Rect(col4, toneY + 94, colW, 16),
+            "HatDcy", 0.02, 0.5, ~state[\hatDecay], Color.green(0.8),
+            { arg val; ~state[\hatDecay] = val; });
+
+        // ---- MASTER / FX ----
+        StaticText(win, Rect(20, toneY + 142, 780, 18))
+            .string_("MASTER / FX")
+            .font_(Font("Helvetica", 11, true))
+            .stringColor_(Color.new255(255, 200, 100));
+
+        ~makeSlider.value(win, Rect(col1, toneY + 162, colW, 16),
+            "Master", 0.0, 1.0, ~state[\masterVol], Color.white,
+            { arg val;
+                ~state[\masterVol] = val;
+                if(~state[\bassSynth].notNil, {
+                    ~state[\bassSynth].set(\amp, ~state[\bassAmp] * val);
+                });
+                if(~state[\padSynth].notNil, {
+                    ~state[\padSynth].set(\amp, ~state[\padAmp] * val);
+                });
+            });
+
+        ~makeSlider.value(win, Rect(col2, toneY + 162, colW, 16),
+            "Reverb", 0.0, 1.0, ~state[\reverbMix], Color.new255(180, 160, 255),
+            { arg val;
+                ~state[\reverbMix] = val;
+                if(~state[\reverbSynth].notNil, { ~state[\reverbSynth].set(\mix, val) });
+            });
+
+        ~makeSlider.value(win, Rect(col3, toneY + 162, colW, 16),
+            "Delay", 0.0, 0.8, ~state[\delayMix], Color.new255(180, 160, 255),
+            { arg val;
+                ~state[\delayMix] = val;
+                if(~state[\delaySynth].notNil, { ~state[\delaySynth].set(\mix, val) });
+            });
+
+        ~makeSlider.value(win, Rect(col4, toneY + 162, colW, 16),
+            "Room", 0.0, 1.0, 0.7, Color.new255(180, 160, 255),
+            { arg val;
+                if(~state[\reverbSynth].notNil, { ~state[\reverbSynth].set(\room, val) });
+            });
+
+        // =============================================
+        // --- ログ & 入力（下部） ---
+        // =============================================
+
         // --- ログ（コマンド履歴） ---
-        StaticText(win, Rect(20, 225, 460, 18))
+        StaticText(win, Rect(20, toneY + 190, 780, 16))
             .string_("Command Log:")
             .font_(Font("Helvetica", 10, true))
             .stringColor_(Color.gray(0.6));
 
-        logView = ScrollView(win, Rect(20, 245, 460, 260))
+        logView = ScrollView(win, Rect(20, toneY + 208, 780, 200))
             .background_(Color.gray(0.08))
             .hasBorder_(true);
 
-        logText = StaticText(logView, Rect(5, 5, 440, 2000))
+        logText = StaticText(logView, Rect(5, 5, 760, 2000))
             .string_("")
             .font_(Font("Courier", 10))
             .stringColor_(Color.green(0.7));
@@ -612,7 +886,7 @@ s.waitForBoot({
                     ++ " | Scale: " ++ ~state[\scale].name.asString
                     ++ " | Chaos: " ++ (~state[\chaos] * 100).round.asString ++ "%"
                     ++ " | Density: " ++ (~state[\density] * 100).round.asString ++ "%"
-                    ++ "\nReverb: " ++ (~state[\reverbMix] * 100).round.asString ++ "%"
+                    ++ " | Reverb: " ++ (~state[\reverbMix] * 100).round.asString ++ "%"
                     ++ " | Delay: " ++ (~state[\delayMix] * 100).round.asString ++ "%"
                     ++ " | Mood: " ++ ~state[\mood].asString
                 );
@@ -620,13 +894,13 @@ s.waitForBoot({
         };
 
         // --- テキスト入力 ---
-        StaticText(win, Rect(20, 520, 460, 18))
+        StaticText(win, Rect(20, toneY + 415, 780, 16))
             .string_("Enter command:")
             .font_(Font("Helvetica", 10, true))
             .stringColor_(Color.gray(0.6));
 
-        inputField = TextField(win, Rect(20, 540, 460, 35))
-            .font_(Font("Courier", 14))
+        inputField = TextField(win, Rect(20, toneY + 433, 780, 30))
+            .font_(Font("Courier", 13))
             .background_(Color.gray(0.08))
             .stringColor_(Color.white)
             .action_({ arg field;
@@ -658,7 +932,7 @@ s.waitForBoot({
         ~updateDisplay.value;
         "=============================================".postln;
         "  Chat Live Performance System - Phase 1    ".postln;
-        "  Type commands in the GUI text field        ".postln;
+        "  Tone Controls + Chat Commands             ".postln;
         "  Type 'help' for available commands         ".postln;
         "=============================================".postln;
 
